@@ -1,0 +1,15 @@
+desc:
+  <<.desc>>
+vars:
+  data: "json://data.json"
+
+steps:
+  first:
+    loop: 
+      count: len(vars.data)
+    include:
+      path:
+        ../../../0_base/<<.dirname>>/<<.method>>/base.yml
+      vars:
+        req: '{{ vars.data[i].req }}'
+        res: '{{ vars.data[i].res }}'

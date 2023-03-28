@@ -1,0 +1,11 @@
+[
+    {
+        "req": {
+            "body": <<.jsonBody>>,
+            "query": <<.jsonQuery>>
+        },
+        "res": {
+            "status": 200
+        }
+    }
+]

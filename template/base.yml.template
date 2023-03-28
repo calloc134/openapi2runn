@@ -1,0 +1,13 @@
+if: included
+runners:
+  req: http://localhost
+steps:
+  first:
+    req:
+      <<.path>>:
+        <<.method>>:
+          body: 
+            <<.bodies>>
+    test:
+      compare(steps.first.res.status, vars.res.status)
+
