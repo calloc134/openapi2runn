@@ -16,8 +16,9 @@ import (
 )
 
 type paramSpec struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Example any
 }
 
 type baseSpec struct {
@@ -49,7 +50,11 @@ func genJson(paramSpecs []paramSpec) string {
 	jsonBodyMap := map[string]any{}
 	for _, param := range paramSpecs {
 		if param.Type == "string" {
-			jsonBodyMap[param.Name] = "dummy"
+			if param.Example != nil {
+				jsonBodyMap[param.Name] = param.Example
+			} else {
+				jsonBodyMap[param.Name] = "dummy"
+			}
 		} else if param.Type == "number" {
 			jsonBodyMap[param.Name] = 0
 		} else {
@@ -90,17 +95,20 @@ func main() {
 				for _, q := range op.Parameters {
 
 					queries = append(queries, paramSpec{
-						Name: q.Value.Name,
-						Type: q.Value.Schema.Value.Type,
+						Name:    q.Value.Name,
+						Type:    q.Value.Schema.Value.Type,
+						Example: q.Value.Example,
 					})
 				}
 			}
 
 			if op.RequestBody != nil {
+
 				for name, b := range op.RequestBody.Value.Content["application/json"].Schema.Value.Properties {
 					bodies = append(bodies, paramSpec{
-						Name: name,
-						Type: b.Value.Type,
+						Name:    name,
+						Type:    b.Value.Type,
+						Example: b.Value.Example,
 					})
 				}
 			}
