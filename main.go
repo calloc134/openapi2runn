@@ -13,10 +13,26 @@ import (
 	"os"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/k0kubun/pp"
 )
 
-func generateDirName(str, sep string) string {
+type paramSpec struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+type baseSpec struct {
+	Method string
+	Params []paramSpec
+	Body   []paramSpec
+}
+
+type pathSpec struct {
+	DirName string
+	Path    string
+	Methods []baseSpec
+}
+
+func genDirName(str, sep string) string {
 
 	re := regexp.MustCompile("[@{}]+")
 	str_noSP := re.ReplaceAllString(str, "")
@@ -28,24 +44,28 @@ func generateDirName(str, sep string) string {
 	return strings.Join(parts, "")
 }
 
+func genJson(paramSpecs []paramSpec) string {
+
+	jsonBodyMap := map[string]any{}
+	for _, param := range paramSpecs {
+		if param.Type == "string" {
+			jsonBodyMap[param.Name] = "dummy"
+		} else if param.Type == "number" {
+			jsonBodyMap[param.Name] = 0
+		} else {
+			jsonBodyMap[param.Name] = ""
+		}
+	}
+	jsonBodyObj, err := json.Marshal(jsonBodyMap)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return string(jsonBodyObj)
+
+}
+
 func main() {
-
-	type paramSpec struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-	}
-
-	type baseSpec struct {
-		Method string
-		Params []paramSpec
-		Body   []paramSpec
-	}
-
-	type pathSpec struct {
-		DirName string
-		Path    string
-		Methods []baseSpec
-	}
 
 	var pathSpecs []pathSpec
 
@@ -57,38 +77,36 @@ func main() {
 
 	for _, path := range doc.Paths.InMatchingOrder() {
 
-		//fmt.Println(path)
-
 		obj := doc.Paths.Find(path).Operations()
 
 		var baseSpecs []baseSpec
 
-		for i, op := range obj {
+		for method, op := range obj {
 
 			var queries []paramSpec
 			var bodies []paramSpec
 
 			if op.Parameters != nil {
-				for _, queryParam := range op.Parameters {
+				for _, q := range op.Parameters {
 
 					queries = append(queries, paramSpec{
-						Name: queryParam.Value.Name,
-						Type: queryParam.Value.Schema.Value.Type,
+						Name: q.Value.Name,
+						Type: q.Value.Schema.Value.Type,
 					})
 				}
 			}
 
 			if op.RequestBody != nil {
-				for name, bodyParams := range op.RequestBody.Value.Content["application/json"].Schema.Value.Properties {
+				for name, b := range op.RequestBody.Value.Content["application/json"].Schema.Value.Properties {
 					bodies = append(bodies, paramSpec{
 						Name: name,
-						Type: bodyParams.Value.Type,
+						Type: b.Value.Type,
 					})
 				}
 			}
 
 			baseSpecs = append(baseSpecs, baseSpec{
-				Method: i,
+				Method: method,
 				Body:   bodies,
 				Params: queries,
 			})
@@ -96,82 +114,69 @@ func main() {
 		}
 
 		pathSpecs = append(pathSpecs, pathSpec{
-			DirName: generateDirName(path, "/"),
+			DirName: genDirName(path, "/"),
 			Path:    path,
 			Methods: baseSpecs,
 		})
 
 	}
 
-	//pp.Print(pathSpecs)
-
-	//yamlData, err := yaml.Marshal(pathSpecs)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	// YAML形式のデータを表示する
-	//fmt.Println(string(yamlData))
-
 	for _, pathSpec := range pathSpecs {
 
-		for _, method := range pathSpec.Methods {
-			if err := os.MkdirAll("swagger/0_base/"+pathSpec.DirName+"/"+method.Method, 0777); err != nil {
+		for _, methodItem := range pathSpec.Methods {
+
+			re := regexp.MustCompile(`{\s*([^}\s]*)\s*}`)
+			modiPath := re.ReplaceAllString(pathSpec.Path, `{{ vars.req.query.$1 }}`)
+
+			if err := os.MkdirAll("swagger/0_base/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
 				fmt.Println(err)
 			}
-
-			if err := os.MkdirAll("swagger/1_noAuth/"+pathSpec.DirName+"/"+method.Method, 0777); err != nil {
+			if err := os.MkdirAll("swagger/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
 				fmt.Println(err)
 			}
-
 			tmpl_base, err := template.New("base.yml.template").Delims("<<", ">>").ParseFiles("template/base.yml.template")
-
 			if err != nil {
 				fmt.Println(err)
 			}
 
-			re := regexp.MustCompile(`{\s*([^}\s]*)\s*}`)
-
-			alterPath := re.ReplaceAllString(pathSpec.Path, `{{ vars.req.query.$1 }}`)
-
-			fp_base, err := os.Create("swagger/0_base/" + pathSpec.DirName + "/" + method.Method + "/base.yml")
+			fp_base, err := os.Create("swagger/0_base/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
 			if err != nil {
 				fmt.Println(err)
 			}
 			defer fp_base.Close()
 
-			outputBodies := ""
-
-			if method.Body != nil {
-				outputBodies = "application/json: \"{{ vars.req.body }}\""
-			} else if method.Method != "get" {
-				outputBodies = "application/json: []"
+			modiBody := ""
+			if methodItem.Body != nil {
+				modiBody = "application/json: \"{{ vars.req.body }}\""
+			} else if methodItem.Method != "get" {
+				modiBody = "application/json: []"
 			} else {
-				outputBodies = "null"
+				modiBody = "null"
 			}
 
 			err = tmpl_base.Execute(fp_base, map[string]any{
-				"method": method.Method,
-				"path":   alterPath,
-				"bodies": outputBodies,
+				"method": methodItem.Method,
+				"path":   modiPath,
+				"bodies": modiBody,
 			})
-
 			if err != nil {
 				fmt.Println(err)
 			}
 
 			tmpl_noAuth, err := template.New("index.yml.template").Delims("<<", ">>").ParseFiles("template/index.yml.template")
+			if err != nil {
+				fmt.Println(err)
+			}
 
-			fp_noAuth, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + method.Method + "/base.yml")
+			fp_noAuth, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
 			if err != nil {
 				fmt.Println(err)
 			}
 			defer fp_noAuth.Close()
 
 			err = tmpl_noAuth.Execute(fp_noAuth, map[string]any{
-				"desc":    "(" + method.Method + ") " + pathSpec.Path + "のテスト",
-				"method":  method.Method,
+				"desc":    "(" + methodItem.Method + ") " + pathSpec.Path + "のテスト",
+				"method":  methodItem.Method,
 				"dirname": pathSpec.DirName,
 			})
 
@@ -180,53 +185,25 @@ func main() {
 			}
 
 			tmpl_data, err := template.New("data.json.template").Delims("<<", ">>").ParseFiles("template/data.json.template")
-
-			fp_data, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + method.Method + "/data.json")
-
 			if err != nil {
 				fmt.Println(err)
 			}
 
-			jsonBodyMap := map[string]any{}
-
-			for _, body := range method.Body {
-
-				if body.Type == "string" {
-					jsonBodyMap[body.Name] = "dummy"
-				} else if body.Type == "number" {
-					jsonBodyMap[body.Name] = 0
-				} else {
-					jsonBodyMap[body.Name] = ""
-				}
+			fp_data, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/data.json")
+			if err != nil {
+				fmt.Println(err)
 			}
-			jsonBodyObj, err := json.Marshal(jsonBodyMap)
-
-			jsonBody := string(jsonBodyObj)
-
-			jsonQueryMap := map[string]any{}
-
-			for _, query := range method.Params {
-
-				if query.Type == "string" {
-					jsonQueryMap[query.Name] = "dummy"
-				} else if query.Type == "number" {
-					jsonQueryMap[query.Name] = 0
-				} else {
-					jsonQueryMap[query.Name] = ""
-				}
-
-			}
-
-			pp.Println(jsonQueryMap)
-
-			jsonQueryObj, err := json.Marshal(jsonQueryMap)
-			jsonQuery := string(jsonQueryObj)
-
 			defer fp_data.Close()
-			err = tmpl_data.Execute(fp_data, map[string]any{
+
+			jsonBody := genJson(methodItem.Body)
+			jsonQuery := genJson(methodItem.Params)
+
+			if err = tmpl_data.Execute(fp_data, map[string]any{
 				"jsonBody":  jsonBody,
 				"jsonQuery": jsonQuery,
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 
 		}
 	}
