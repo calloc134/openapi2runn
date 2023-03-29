@@ -43,6 +43,13 @@ _____  _____  _____  _____  _____  _____  ___  _____  _____  __ __  _____  _____
 			output = "output"
 		}
 
+		// フラグから出力ディレクトリ名を取得
+		host, err := flags.GetString("server")
+		if err != nil {
+			fmt.Println(err)
+			output = "http://localhost:8080"
+		}
+
 		// OpenAPIのYAMLファイルを読み込みしてオブジェクトを生成
 		pathSpecs, err := genItem(input)
 		if err != nil {
@@ -51,7 +58,7 @@ _____  _____  _____  _____  _____  _____  ___  _____  _____  __ __  _____  _____
 		}
 
 		// テンプレートをレンダリング
-		err = renderTemplate(output, *pathSpecs)
+		err = renderTemplate(output, host, *pathSpecs)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -63,8 +70,10 @@ func init() {
 	rootCmd.AddCommand(genCmd)
 	genCmd.Flags().StringP("input", "i", "", "Input file name")
 	genCmd.Flags().StringP("output", "o", "", "Output dir name")
+	genCmd.Flags().StringP("server", "s", "", "Host server")
 
 	genCmd.MarkFlagRequired("input")
 	genCmd.MarkFlagRequired("output")
+	genCmd.MarkFlagRequired("server")
 
 }

@@ -1,6 +1,6 @@
 if: included
 runners:
-  req: http://localhost
+  req: <<.host>>
 steps:
   first:
     req:

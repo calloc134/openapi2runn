@@ -1,3 +1,4 @@
 output/*
 openapi.yaml
+swagger.json
 openapi2runn.exe

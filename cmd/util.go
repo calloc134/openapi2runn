@@ -153,7 +153,7 @@ func genItem(inputFileName string) (*[]pathSpec, error) {
 	return &pathSpecs, nil
 }
 
-func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
+func renderTemplate(outputDir string, host string, pathSpecs []pathSpec) error {
 
 	// ここからは先ほど生成した構造体を用いてテンプレートよりYAMLを作成
 	// パス毎に処理
@@ -214,6 +214,7 @@ func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
 				"method": methodItem.Method,
 				"path":   modiPath,
 				"bodies": modiBody,
+				"host":   host,
 			})
 			if err != nil {
 				fmt.Println(err)
