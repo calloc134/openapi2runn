@@ -15,6 +15,15 @@ var genCmd = &cobra.Command{
 	Short: "Create test scenario files for runn based on OpenAPI documentation",
 	Long: `The process of creating test scenario files for runn from OpenAPI documentation involves creating scenarios for each API method endpoint,
 and placing data in JSON files in the same directory as the scenarios. By increasing the number of arrays in the JSON file, multiple test data can be included in the scenarios.`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		fmt.Println(`
+_____  _____  _____  _____  _____  _____  ___  _____  _____  __ __  _____  _____ 
+/  _  \/  _  \/   __\/  _  \/  _  \/  _  \/___\<___  \/  _  \/  |  \/  _  \/  _  \
+|  |  ||   __/|   __||  |  ||  _  ||   __/|   | /  __/|  _  <|  |  ||  |  ||  |  |
+\_____/\__/   \_____/\__|__/\__|__/\__/   \___/<_____|\__|\_/\_____/\__|__/\__|__/
+`)
+	},
+
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// OpenAPIのYAMLファイルを読み込みしてオブジェクトを生成
