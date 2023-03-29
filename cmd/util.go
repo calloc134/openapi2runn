@@ -29,7 +29,7 @@ func genDirName(str, sep string) string {
 }
 
 // テストデータとなるJSONを生成する関数
-func genJson(paramSpecs []paramSpec) string {
+func genJson(paramSpecs []paramSpec) (string, error) {
 
 	jsonBodyMap := map[string]any{}
 
@@ -59,10 +59,11 @@ func genJson(paramSpecs []paramSpec) string {
 	jsonBodyObj, err := json.Marshal(jsonBodyMap)
 	if err != nil {
 		fmt.Println(err)
+		return "", err
 	}
 
 	// 文字列に変換して返す
-	return string(jsonBodyObj)
+	return string(jsonBodyObj), nil
 
 }
 
@@ -267,19 +268,27 @@ func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
 			tmpl_data, err := template.New("data.json.template").Delims("<<", ">>").ParseFiles("template/data.json.template")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// 1_noAuth/パス/メソッド名/data.jsonファイルを作成
 			fp_data, err := os.Create(outputDir + "/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/data.json")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// ファイルの後処理をdefer
 			defer fp_data.Close()
 
 			// ボディのJSONを生成
-			jsonBody := genJson(methodItem.Body)
+			jsonBody, err := genJson(methodItem.Body)
+			if err != nil {
+				return err
+			}
 			// クエリのJSONを生成
-			jsonQuery := genJson(methodItem.Params)
+			jsonQuery, err := genJson(methodItem.Params)
+			if err != nil {
+				return err
+			}
 
 			// 1_noAuth/パス/メソッド名/data.jsonをレンダリング
 			if err = tmpl_data.Execute(fp_data, map[string]any{
@@ -287,6 +296,7 @@ func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
 				"jsonQuery": jsonQuery,
 			}); err != nil {
 				fmt.Println(err)
+				return err
 			}
 
 		}
