@@ -92,7 +92,7 @@ func genJson(paramSpecs []paramSpec) string {
 
 }
 
-func genItem(inputFileName string) ([]pathSpec, error) {
+func genItem(inputFileName string) (*[]pathSpec, error) {
 	// パス毎の構造体を格納するスライスを定義
 	var pathSpecs []pathSpec
 
@@ -100,7 +100,7 @@ func genItem(inputFileName string) ([]pathSpec, error) {
 	doc, err := openapi3.NewLoader().LoadFromFile(inputFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return []pathSpec{}, err
+		return &[]pathSpec{}, err
 	}
 
 	// パス毎に処理
@@ -175,7 +175,7 @@ func genItem(inputFileName string) ([]pathSpec, error) {
 
 	}
 
-	return pathSpecs, nil
+	return &pathSpecs, nil
 }
 
 func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
@@ -329,7 +329,7 @@ func main() {
 	}
 
 	// テンプレートをレンダリング
-	err = renderTemplate("output", pathSpecs)
+	err = renderTemplate("output", *pathSpecs)
 	if err != nil {
 		fmt.Println(err)
 	}
