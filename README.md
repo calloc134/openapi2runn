@@ -56,18 +56,25 @@ $ runn run **/**/*.yml (対象サーバのホスト)
 └── /1_noAuth/
     ├── /ApiProfileMe/
     |   ├── /GET/
-    │   │   └── base.yml
+    │   │   ├── base.yml
+    |   |   └── data.json
     │   ├── /PUT/
-    │   │   └── base.yml
+    │   │   ├── base.yml
+    |   |   └── data.json
     │   └── /DELETE/
-    │       └── base.yml
+    │       ├── base.yml
+    |       └── data.json
     └── /ApiPostId/
         ├── /GET/
-        │   └── base.yml
+        │   ├── base.yml
+        |   └── data.json
         ├── /PUT/
-        │   └── base.yml
+        │   ├── base.yml
+        |   └── data.json
         └── /DELETE/
-            └── base.yml
+            ├── base.yml
+            ├── data.json
+            └── config.toml
 ``` 
 URL内のパラメータも、ディレクトリ名として扱われます。
 
