@@ -1,4 +1,4 @@
-package main
+package cmd
 
 // 設定ファイルの設定を格納する構造体を定義
 type config struct {
