@@ -56,22 +56,22 @@ $ runn run **/**/*.yml (対象サーバのホスト)
 └── /1_noAuth/
     ├── /ApiProfileMe/
     |   ├── /GET/
-    │   │   └── noAuth.yml
+    │   │   └── base.yml
     │   ├── /PUT/
-    │   │   └── noAuth.yml
+    │   │   └── base.yml
     │   └── /DELETE/
-    │       └── noAuth.yml
+    │       └── base.yml
     └── /ApiPostId/
         ├── /GET/
-        │   └── noAuth.yml
+        │   └── base.yml
         ├── /PUT/
-        │   └── noAuth.yml
+        │   └── base.yml
         └── /DELETE/
-            └── noAuth.yml
+            └── base.yml
 ``` 
 URL内のパラメータも、ディレクトリ名として扱われます。
 
-また、0_baseディレクトリには、APIのベースとなるテストシナリオが格納されます。
+0_baseディレクトリには、APIのベースとなるテストシナリオが格納されます。
 
 以下に実例を示します。
     
