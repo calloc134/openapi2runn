@@ -12,8 +12,14 @@ import (
 
 	"os"
 
+	"github.com/BurntSushi/toml"
 	"github.com/getkin/kin-openapi/openapi3"
 )
+
+// 設定ファイルの設定を格納する構造体を定義
+type config struct {
+	AllowOverride bool `toml:"allowOverride"`
+}
 
 // パラメータを格納する構造体を定義
 type paramSpec struct {
@@ -41,7 +47,6 @@ func genDirName(str, sep string) string {
 
 	re := regexp.MustCompile("[@{}]+")
 	str_noSP := re.ReplaceAllString(str, "")
-	//fmt.Println(str_noSP)
 	parts := strings.Split(str_noSP, sep)
 	for i, part := range parts {
 		parts[i] = cases.Title(language.Und, cases.NoLower).String(part)
@@ -253,6 +258,22 @@ func main() {
 			})
 			if err != nil {
 				fmt.Println(err)
+			}
+
+			// Tomlの構成ファイルの読み込み
+			var configToml config
+			// config.tomlが存在する場合
+			if _, err := os.Stat("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/config.toml"); !os.IsNotExist(err) {
+				// config.tomlを読み込む
+				_, err = toml.DecodeFile("swagger/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method+"/config.toml", &configToml)
+				if err != nil {
+					fmt.Println(err)
+				}
+				// allowOverrideがfalseの場合
+				if configToml.AllowOverride == false {
+					// ループをコンティニューしJSONを生成しない
+					continue
+				}
 			}
 
 			// 1_noAuth/パス/メソッド名/data.jsonをレンダリングするための準備

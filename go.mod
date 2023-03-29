@@ -3,6 +3,7 @@ module hoge
 go 1.19
 
 require (
+	github.com/BurntSushi/toml v1.2.1
 	github.com/getkin/kin-openapi v0.115.0
 	golang.org/x/text v0.3.7
 )
