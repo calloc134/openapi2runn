@@ -92,16 +92,15 @@ func genJson(paramSpecs []paramSpec) string {
 
 }
 
-func main() {
-
+func genItem(inputFileName string) ([]pathSpec, error) {
 	// パス毎の構造体を格納するスライスを定義
 	var pathSpecs []pathSpec
 
 	// OpenAPIのYAMLファイルを読み込み
-	doc, err := openapi3.NewLoader().LoadFromFile("openapi.yaml")
+	doc, err := openapi3.NewLoader().LoadFromFile(inputFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return
+		return []pathSpec{}, err
 	}
 
 	// パス毎に処理
@@ -176,6 +175,11 @@ func main() {
 
 	}
 
+	return pathSpecs, nil
+}
+
+func renderTemplate(outputDir string, pathSpecs []pathSpec) error {
+
 	// ここからは先ほど生成した構造体を用いてテンプレートよりYAMLを作成
 	// パス毎に処理
 	for _, pathSpec := range pathSpecs {
@@ -188,12 +192,14 @@ func main() {
 
 			// 以下ディレクトリの作成
 			// 0_base/パス/メソッド名/base.yml
-			if err := os.MkdirAll("swagger/0_base/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
+			if err := os.MkdirAll(outputDir+"/0_base/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// 1_noAuth/パス/メソッド名/noAuth.yml
-			if err := os.MkdirAll("swagger/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
+			if err := os.MkdirAll(outputDir+"/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method, 0777); err != nil {
 				fmt.Println(err)
+				return err
 			}
 
 			// 以下テンプレートの適用
@@ -201,11 +207,13 @@ func main() {
 			tmpl_base, err := template.New("base.yml.template").Delims("<<", ">>").ParseFiles("template/base.yml.template")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// 0_base/パス/メソッド名/base.ymlファイルを作成
-			fp_base, err := os.Create("swagger/0_base/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
+			fp_base, err := os.Create(outputDir + "/0_base/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// ファイルの後処理をdefer
 			defer fp_base.Close()
@@ -234,18 +242,21 @@ func main() {
 			})
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 
 			// 1_noAuth/パス/メソッド名/noAuth.ymlをレンダリングするための準備
 			tmpl_noAuth, err := template.New("index.yml.template").Delims("<<", ">>").ParseFiles("template/index.yml.template")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 
 			// 1_noAuth/パス/メソッド名/noAuth.ymlファイルを作成
-			fp_noAuth, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
+			fp_noAuth, err := os.Create(outputDir + "/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/base.yml")
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 			// ファイルの後処理をdefer
 			defer fp_noAuth.Close()
@@ -258,16 +269,18 @@ func main() {
 			})
 			if err != nil {
 				fmt.Println(err)
+				return err
 			}
 
 			// Tomlの構成ファイルの読み込み
 			var configToml config
 			// config.tomlが存在する場合
-			if _, err := os.Stat("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/config.toml"); !os.IsNotExist(err) {
+			if _, err := os.Stat(outputDir + "/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/config.toml"); !os.IsNotExist(err) {
 				// config.tomlを読み込む
-				_, err = toml.DecodeFile("swagger/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method+"/config.toml", &configToml)
+				_, err = toml.DecodeFile(outputDir+"/1_noAuth/"+pathSpec.DirName+"/"+methodItem.Method+"/config.toml", &configToml)
 				if err != nil {
 					fmt.Println(err)
+					return err
 				}
 				// allowOverrideがfalseの場合
 				if configToml.AllowOverride == false {
@@ -282,7 +295,7 @@ func main() {
 				fmt.Println(err)
 			}
 			// 1_noAuth/パス/メソッド名/data.jsonファイルを作成
-			fp_data, err := os.Create("swagger/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/data.json")
+			fp_data, err := os.Create(outputDir + "/1_noAuth/" + pathSpec.DirName + "/" + methodItem.Method + "/data.json")
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -303,6 +316,22 @@ func main() {
 			}
 
 		}
+	}
+
+	return nil
+}
+
+func main() {
+	// OpenAPIのYAMLファイルを読み込みしてオブジェクトを生成
+	pathSpecs, err := genItem("openapi.yaml")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// テンプレートをレンダリング
+	err = renderTemplate("output", pathSpecs)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 }
